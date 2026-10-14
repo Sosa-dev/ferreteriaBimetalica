@@ -1,9 +1,9 @@
-# Incrementos del frontend Flutter — Sprints 1 a 4
+# Incrementos del frontend Flutter: Sprints 1 a 5
 
 ## 1. Propósito y alcance
 
 Este documento registra los incrementos realizados en el frontend Flutter de
-Ferretería Bimetálica hasta el Sprint 4 del cronograma. Describe las pantallas,
+Ferretería Bimetálica hasta el Sprint 5 del cronograma. Describe las pantallas,
 flujos implementados, integración con la API FastAPI, validaciones ejecutadas
 y las limitaciones que deben considerarse en la demostración.
 
@@ -19,6 +19,7 @@ fiscal dependen de la API.
 | 2 | Consulta y mantenimiento de productos, categorías y ubicaciones | Implementado |
 | 3 | Catálogo público y búsqueda de productos para empleados | Implementado |
 | 4 | Carrito de venta, cobro, visualización e impresión de factura | Implementado, condicionado a configuración fiscal del backend |
+| 5 | Carrito de compras de clientes, consulta de pedidos y gestión de estados | Implementado |
 
 ## 3. Incremento del Sprint 1: arquitectura y autenticación
 
@@ -176,8 +177,61 @@ importes y registrar la venta.
 - El precio e IVA mostrados antes de cobrar son una vista previa. Se deben
   considerar definitivos los importes de la respuesta de la API.
 
-## 7. Arquitectura Flutter relacionada
+## 7. Incremento del Sprint 5: pedidos en línea
 
+### Flujo del cliente
+
+- Desde el catálogo, el cliente agrega productos al carrito y puede ajustar o
+  quitar cantidades antes de confirmar el pedido.
+- La app envía únicamente los identificadores y cantidades. La API asigna el
+  cliente autenticado, verifica los productos activos y calcula el total con
+  los precios vigentes.
+- Después de crear el pedido, el cliente ve la lista de sus pedidos, su estado,
+  fecha, total y el detalle con nombre, código, cantidad y precio de cada
+  producto.
+- La lista se puede actualizar manualmente; el acceso **Mis pedidos** también
+  está disponible desde el inicio del cliente.
+
+### Gestión del empleado
+
+- Empleados y propietarios consultan todos los pedidos desde **Gestión de
+  pedidos**.
+- Pueden avanzar cada pedido por las transiciones permitidas por la API:
+  `Pendiente` → `En preparacion` → `Listo` → `Entregado`.
+- La app informa errores del servidor y permite actualizar la lista mediante
+  gesto de refresco.
+
+### Integración y verificación
+
+| Operación | Endpoint |
+|---|---|
+| Crear pedido | `POST /pedidos` |
+| Consultar pedidos del cliente o cola del personal | `GET /pedidos` |
+| Consultar detalle del pedido | `GET /pedidos/{id}/detalles` |
+| Avanzar estado (empleado/propietario) | `PUT /pedidos/{id}` |
+
+El detalle de pedido incluye también `producto_nombre` y `producto_codigo`
+para mostrar artículos identificables en **Mis pedidos**. La API sigue
+validando la propiedad del pedido, los roles de acceso y el avance secuencial
+de estados.
+
+- Pruebas API: 11 aprobadas, incluidas autorización, cálculo del pedido,
+  aislamiento por cliente, detalle de productos y cambio de estado.
+- `dart analyze lib test`: sin problemas reportados.
+- `flutter test --no-pub`: 5 pruebas aprobadas.
+- `flutter analyze` no pudo iniciar porque Windows requiere Developer Mode o
+  soporte de enlaces simbólicos para preparar los plugins; `dart analyze`
+  completó el análisis estático sin problemas.
+
+## 8. Arquitectura Flutter relacionada
+
+- Identidad visual: logotipo de marca y paleta azul petróleo (`#14283C`),
+  naranja industrial (`#F47721`) y fondo claro (`#F8FAFC`), conforme a la guía
+  de integración entregada para la aplicación.
+- Catálogo de clientes: búsqueda simplificada, tarjetas con precio y acción
+  clara para agregar al carrito, con distribución adaptable a móvil, tablet y
+  escritorio. No se muestran descuentos inventados; las ofertas requieren que
+  la API proporcione información de promociones.
 - `lib/main.dart`: tema visual y punto de entrada.
 - `lib/core/api_client.dart`: configuración de Dio, URL base, JWT y conversión
   de errores de API a mensajes para la interfaz.
@@ -188,13 +242,15 @@ importes y registrar la venta.
 - `lib/screens/inventory_screen.dart`: productos, categorías y ubicaciones.
 - `lib/screens/catalog_screen.dart`: catálogo de clientes y búsqueda de
   empleados.
+- `lib/screens/order_screens.dart`: carrito del cliente, sus pedidos y gestión
+  de pedidos del personal.
 - `lib/screens/pos_screen.dart`: carrito, cobro y solicitud de factura.
 - `lib/screens/invoice_screen.dart`: vista e impresión de factura.
 
 La apariencia conserva la paleta azul grisácea de la pantalla inicial, con
 controles Material, tarjetas y formularios adaptados a pantallas móviles.
 
-## 8. Configuración y ejecución
+## 9. Configuración y ejecución
 
 ### Emulador Android
 
@@ -218,7 +274,7 @@ Flutter sirve la aplicación. En un dispositivo físico se debe sustituir la
 dirección por la IP LAN de la computadora donde corre FastAPI. En producción,
 se recomienda HTTPS.
 
-## 9. Verificación realizada
+## 10. Verificación realizada
 
 Se ejecutaron las siguientes verificaciones durante el desarrollo:
 
@@ -232,7 +288,7 @@ Las pruebas de backend verifican contratos y reglas del servidor; no sustituyen
 una prueba de extremo a extremo contra una instancia de API y base de datos
 configuradas para demostración.
 
-## 10. Archivos principales
+## 11. Archivos principales
 
 - App Flutter: `lib/`
 - Prueba de navegación: `test/widget_test.dart`

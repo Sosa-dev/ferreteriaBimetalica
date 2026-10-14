@@ -28,9 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
           'username': _emailController.text.trim(),
           'password': _passwordController.text,
         },
-        options: Options(
-          contentType: Headers.formUrlEncodedContentType,
-        ),
+        options: Options(contentType: Headers.formUrlEncodedContentType),
       );
       final data = Map<String, dynamic>.from(response.data as Map);
       final token = data['access_token']?.toString();
@@ -70,103 +68,104 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        body: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(28),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Icon(Icons.handyman, size: 78, color: Color(0xFF455A64)),
-                      const SizedBox(height: 20),
-                      Text(
-                        'Ferretería Bimetálica',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF37474F),
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text('Iniciar sesión', textAlign: TextAlign.center),
-                      const SizedBox(height: 30),
-                      TextFormField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(
-                          labelText: 'Correo electrónico',
-                          prefixIcon: Icon(Icons.email_outlined),
-                        ),
-                        validator: (value) => value == null || value.trim().isEmpty
-                            ? 'Ingresa tu correo'
-                            : null,
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _passwordController,
-                        obscureText: _obscurePassword,
-                        decoration: InputDecoration(
-                          labelText: 'Contraseña',
-                          prefixIcon: const Icon(Icons.lock_outline),
-                          suffixIcon: IconButton(
-                            onPressed: () => setState(
-                              () => _obscurePassword = !_obscurePassword,
-                            ),
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility_off
-                                  : Icons.visibility,
-                            ),
-                          ),
-                        ),
-                        validator: (value) => value == null || value.isEmpty
-                            ? 'Ingresa tu contraseña'
-                            : null,
-                        onFieldSubmitted: (_) => _login(),
-                      ),
-                      const SizedBox(height: 24),
-                      FilledButton(
-                        onPressed: _loading ? null : _login,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF37474F),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: _loading
-                            ? const SizedBox.square(
-                                dimension: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Text('Ingresar'),
-                      ),
-                      const SizedBox(height: 24),
-                      OutlinedButton.icon(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const RegisterScreen(),
-                          ),
-                        ),
-                        icon: const Icon(Icons.person_add_alt_1),
-                        label: const Text('Sign up'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                      ),
-
-                    ],
+    body: SafeArea(
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(28),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Image.asset(
+                    'assets/branding/bimetalica_icon.png',
+                    width: 92,
+                    height: 92,
                   ),
-                ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Ferretería Bimetálica',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF14283C),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text('Iniciar sesión', textAlign: TextAlign.center),
+                  const SizedBox(height: 30),
+                  TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      labelText: 'Correo electrónico',
+                      prefixIcon: Icon(Icons.email_outlined),
+                    ),
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? 'Ingresa tu correo'
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
+                      labelText: 'Contraseña',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                      ),
+                    ),
+                    validator: (value) => value == null || value.isEmpty
+                        ? 'Ingresa tu contraseña'
+                        : null,
+                    onFieldSubmitted: (_) => _login(),
+                  ),
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    onPressed: _loading ? null : _login,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF14283C),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: _loading
+                        ? const SizedBox.square(
+                            dimension: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('Ingresar'),
+                  ),
+                  const SizedBox(height: 24),
+                  OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                    ),
+                    icon: const Icon(Icons.person_add_alt_1),
+                    label: const Text('Sign up'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
         ),
-      );
+      ),
+    ),
+  );
 }
 
 class RegisterScreen extends StatefulWidget {
@@ -199,7 +198,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cuenta creada. Ya puedes iniciar sesión.')),
+        const SnackBar(
+          content: Text('Cuenta creada. Ya puedes iniciar sesión.'),
+        ),
       );
       Navigator.of(context).pop();
     } catch (error) {
@@ -227,62 +228,61 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Registro de cliente')),
-        body: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 460),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      _field(_name, 'Nombres'),
-                      const SizedBox(height: 14),
-                      _field(_lastName, 'Apellidos'),
-                      const SizedBox(height: 14),
-                      _field(
-                        _email,
-                        'Correo electrónico',
-                        keyboardType: TextInputType.emailAddress,
-                      ),
-                      const SizedBox(height: 14),
-                      _field(_password, 'Contraseña', obscure: true),
-                      const SizedBox(height: 22),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          onPressed: _loading ? null : _register,
-                          child: _loading
-                              ? const CircularProgressIndicator()
-                              : const Text('Crear cuenta'),
-                        ),
-                      ),
-                    ],
+    appBar: AppBar(title: const Text('Registro de cliente')),
+    body: SafeArea(
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 460),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  _field(_name, 'Nombres'),
+                  const SizedBox(height: 14),
+                  _field(_lastName, 'Apellidos'),
+                  const SizedBox(height: 14),
+                  _field(
+                    _email,
+                    'Correo electrónico',
+                    keyboardType: TextInputType.emailAddress,
                   ),
-                ),
+                  const SizedBox(height: 14),
+                  _field(_password, 'Contraseña', obscure: true),
+                  const SizedBox(height: 22),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: _loading ? null : _register,
+                      child: _loading
+                          ? const CircularProgressIndicator()
+                          : const Text('Crear cuenta'),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
         ),
-      );
+      ),
+    ),
+  );
 
   Widget _field(
     TextEditingController controller,
     String label, {
     bool obscure = false,
     TextInputType? keyboardType,
-  }) =>
-      TextFormField(
-        controller: controller,
-        obscureText: obscure,
-        keyboardType: keyboardType,
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(obscure ? Icons.lock_outline : Icons.person_outline),
-        ),
-        validator: (value) =>
-            value == null || value.trim().isEmpty ? 'Campo obligatorio' : null,
-      );
+  }) => TextFormField(
+    controller: controller,
+    obscureText: obscure,
+    keyboardType: keyboardType,
+    decoration: InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(obscure ? Icons.lock_outline : Icons.person_outline),
+    ),
+    validator: (value) =>
+        value == null || value.trim().isEmpty ? 'Campo obligatorio' : null,
+  );
 }

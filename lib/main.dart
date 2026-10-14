@@ -16,14 +16,14 @@ class FerreteriaApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF455A64),
-          primary: const Color(0xFF37474F),
-          secondary: const Color(0xFFEF6C00),
-          surface: const Color(0xFFF7F8F9),
+          seedColor: const Color(0xFF14283C),
+          primary: const Color(0xFF14283C),
+          secondary: const Color(0xFFF47721),
+          surface: const Color(0xFFF8FAFC),
         ),
-        scaffoldBackgroundColor: const Color(0xFFF7F8F9),
+        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF37474F),
+          backgroundColor: Color(0xFF14283C),
           foregroundColor: Colors.white,
           centerTitle: false,
         ),
@@ -40,7 +40,26 @@ class FerreteriaApp extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFF546E7A), width: 1.5),
+            borderSide: const BorderSide(color: Color(0xFFF47721), width: 1.5),
+          ),
+        ),
+        cardTheme: CardThemeData(
+          color: Colors.white,
+          elevation: 1,
+          margin: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: const BorderSide(color: Color(0xFFE7ECF0)),
+          ),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFFF47721),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
           ),
         ),
         useMaterial3: true,

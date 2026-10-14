@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../core/api_client.dart';
 import '../models/product.dart';
 import '../widgets/product_photo.dart';
+import 'order_screens.dart';
 
 class CatalogScreen extends StatefulWidget {
   const CatalogScreen({required this.employeeMode, super.key});
@@ -20,6 +21,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
   Timer? _debounce;
   String _searchField = 'nombre';
   List<Product> _products = [];
+  final Map<int, OrderCartLine> _cart = {};
   bool _loading = false;
   String? _error;
 
@@ -76,12 +78,77 @@ class _CatalogScreenState extends State<CatalogScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(widget.employeeMode ? 'Búsqueda de productos' : 'Catálogo'),
+      title: widget.employeeMode
+          ? const Text('Búsqueda de productos')
+          : Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Image.asset('assets/branding/bimetalica_icon.png'),
+                ),
+                const SizedBox(width: 10),
+                const Text('Bimetálica'),
+              ],
+            ),
+      actions: [
+        if (!widget.employeeMode)
+          IconButton(
+            tooltip: 'Carrito',
+            onPressed: _openCart,
+            icon: Badge(
+              label: Text(
+                '${_cart.values.fold<int>(0, (sum, line) => sum + line.quantity)}',
+              ),
+              isLabelVisible: _cart.isNotEmpty,
+              child: const Icon(Icons.shopping_cart_outlined),
+            ),
+          ),
+      ],
     ),
     body: Column(
       children: [
+        if (!widget.employeeMode)
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF1E7),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.lightbulb_outline, color: Color(0xFFF47721)),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Todo para tu próximo proyecto',
+                        style: TextStyle(
+                          color: Color(0xFF14283C),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Explora productos y consulta sus precios.',
+                        style: TextStyle(color: Color(0xFF536273)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          padding: EdgeInsets.fromLTRB(16, widget.employeeMode ? 16 : 8, 16, 8),
           child: Column(
             children: [
               TextField(
@@ -99,28 +166,30 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                initialValue: _searchField,
-                decoration: const InputDecoration(
-                  labelText: 'Buscar por',
-                  prefixIcon: Icon(Icons.tune),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'nombre', child: Text('Nombre')),
-                  DropdownMenuItem(value: 'codigo', child: Text('Código')),
-                  DropdownMenuItem(value: 'marca', child: Text('Marca')),
-                  DropdownMenuItem(
-                    value: 'categoria',
-                    child: Text('Categoría'),
+              if (widget.employeeMode) ...[
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  initialValue: _searchField,
+                  decoration: const InputDecoration(
+                    labelText: 'Buscar por',
+                    prefixIcon: Icon(Icons.tune),
                   ),
-                  DropdownMenuItem(value: 'medida', child: Text('Medida')),
-                ],
-                onChanged: (value) {
-                  setState(() => _searchField = value ?? 'nombre');
-                  _search();
-                },
-              ),
+                  items: const [
+                    DropdownMenuItem(value: 'nombre', child: Text('Nombre')),
+                    DropdownMenuItem(value: 'codigo', child: Text('Código')),
+                    DropdownMenuItem(value: 'marca', child: Text('Marca')),
+                    DropdownMenuItem(
+                      value: 'categoria',
+                      child: Text('Categoría'),
+                    ),
+                    DropdownMenuItem(value: 'medida', child: Text('Medida')),
+                  ],
+                  onChanged: (value) {
+                    setState(() => _searchField = value ?? 'nombre');
+                    _search();
+                  },
+                ),
+              ],
             ],
           ),
         ),
@@ -141,12 +210,43 @@ class _CatalogScreenState extends State<CatalogScreen> {
               if (widget.employeeMode) {
                 return _employeeResults();
               }
-              final columns = constraints.maxWidth > 700 ? 3 : 2;
+              final columns = constraints.maxWidth >= 1000
+                  ? 4
+                  : constraints.maxWidth >= 600
+                  ? 3
+                  : 2;
+              if (_products.isEmpty && !_loading && _error == null) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.search_off_outlined,
+                          size: 48,
+                          color: Color(0xFF8090A0),
+                        ),
+                        SizedBox(height: 12),
+                        Text(
+                          'No encontramos productos',
+                          style: TextStyle(
+                            color: Color(0xFF14283C),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text('Prueba con otra búsqueda.'),
+                      ],
+                    ),
+                  ),
+                );
+              }
               return GridView.builder(
                 padding: const EdgeInsets.all(12),
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: columns,
-                  childAspectRatio: 0.72,
+                  mainAxisExtent: 286,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                 ),
@@ -165,14 +265,13 @@ class _CatalogScreenState extends State<CatalogScreen> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: SizedBox(
-            width: double.infinity,
-            child: ProductPhoto(
-              url: product.photoUrl,
-              fit: BoxFit.cover,
-              iconSize: 48,
-            ),
+        SizedBox(
+          height: 136,
+          width: double.infinity,
+          child: ProductPhoto(
+            url: product.photoUrl,
+            fit: BoxFit.cover,
+            iconSize: 48,
           ),
         ),
         Padding(
@@ -182,7 +281,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
             children: [
               Text(
                 product.name,
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
@@ -197,7 +296,17 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 '\$${product.salePrice.toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF37474F),
+                  fontSize: 17,
+                  color: Color(0xFF14283C),
+                ),
+              ),
+              const SizedBox(height: 6),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () => _addToCart(product),
+                  icon: const Icon(Icons.add_shopping_cart, size: 18),
+                  label: const Text('Agregar'),
                 ),
               ),
             ],
@@ -206,6 +315,41 @@ class _CatalogScreenState extends State<CatalogScreen> {
       ],
     ),
   );
+
+  void _addToCart(Product product) {
+    setState(() {
+      final current = _cart[product.id];
+      _cart[product.id] = OrderCartLine(
+        product: product,
+        quantity: (current?.quantity ?? 0) + 1,
+      );
+    });
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text('${product.name} agregado al carrito'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+  }
+
+  Future<void> _openCart() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => OrderCartScreen(
+          items: _cart,
+          onCartChanged: () {
+            if (mounted) setState(() {});
+          },
+          onOrderCreated: () {
+            if (mounted) setState(_cart.clear);
+          },
+        ),
+      ),
+    );
+    if (mounted) setState(() {});
+  }
 
   Widget _employeeResults() {
     if (_products.isEmpty && !_loading && _error == null) {

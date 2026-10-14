@@ -148,7 +148,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                   const Icon(
                     Icons.receipt_long,
                     size: 38,
-                    color: Color(0xFF455A64),
+                    color: Color(0xFF14283C),
                   ),
                   const SizedBox(height: 8),
                   Text(

@@ -4,6 +4,7 @@ import '../core/api_client.dart';
 import 'auth_screens.dart';
 import 'catalog_screen.dart';
 import 'inventory_screen.dart';
+import 'order_screens.dart';
 import 'pos_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -19,11 +20,11 @@ class HomeScreen extends StatelessWidget {
   final int roleId;
 
   String get roleName => switch (roleId) {
-        1 => 'Propietario',
-        2 => 'Empleado',
-        3 => 'Cliente',
-        _ => 'Usuario',
-      };
+    1 => 'Propietario',
+    2 => 'Empleado',
+    3 => 'Cliente',
+    _ => 'Usuario',
+  };
 
   Future<void> _logout(BuildContext context) async {
     await ApiClient.instance.clearToken();
@@ -45,7 +46,20 @@ class HomeScreen extends StatelessWidget {
           Icons.storefront_outlined,
           () => _open(context, const CatalogScreen(employeeMode: false)),
         ),
+      if (roleId == 3)
+        _HomeAction(
+          'Mis pedidos',
+          'Consulta el estado de tus solicitudes',
+          Icons.receipt_long_outlined,
+          () => _open(context, const CustomerOrdersScreen()),
+        ),
       if (isStaff) ...[
+        _HomeAction(
+          'Gestión de pedidos',
+          'Revisa pedidos y actualiza su estado',
+          Icons.assignment_outlined,
+          () => _open(context, const StaffOrdersScreen()),
+        ),
         _HomeAction(
           'Inventario',
           'Productos, categorías y ubicaciones',
@@ -85,20 +99,29 @@ class HomeScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: const Color(0xFF455A64),
+                color: const Color(0xFF14283C),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.handyman, color: Colors.white, size: 38),
+                  Container(
+                    width: 56,
+                    height: 56,
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Image.asset('assets/branding/bimetalica_icon.png'),
+                  ),
                   const SizedBox(height: 12),
                   Text(
                     'Hola, $name',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(email, style: const TextStyle(color: Colors.white70)),
@@ -106,7 +129,7 @@ class HomeScreen extends StatelessWidget {
                   Chip(
                     label: Text(roleName),
                     avatar: const Icon(Icons.badge_outlined, size: 18),
-                    backgroundColor: Colors.white,
+                    backgroundColor: const Color(0xFFFFF1E7),
                   ),
                 ],
               ),
@@ -114,9 +137,8 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 22),
             Text(
               '¿Qué necesitas hacer?',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             if (actions.isEmpty)
@@ -132,11 +154,13 @@ class HomeScreen extends StatelessWidget {
               (action) => Card(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: ListTile(
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   leading: CircleAvatar(
-                    backgroundColor: const Color(0xFFECEFF1),
-                    child: Icon(action.icon, color: const Color(0xFF37474F)),
+                    backgroundColor: const Color(0xFFEAF0F5),
+                    child: Icon(action.icon, color: const Color(0xFF14283C)),
                   ),
                   title: Text(
                     action.title,

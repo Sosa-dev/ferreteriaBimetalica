@@ -25,7 +25,7 @@ class ProductPhoto extends StatelessWidget {
       loadingBuilder: (context, child, progress) {
         if (progress == null) return child;
         return const ColoredBox(
-          color: Color(0xFFECEFF1),
+          color: Color(0xFFF1F4F7),
           child: Center(
             child: SizedBox.square(
               dimension: 24,
@@ -40,9 +40,9 @@ class ProductPhoto extends StatelessWidget {
   }
 
   Widget _placeholder(IconData icon) => ColoredBox(
-    color: const Color(0xFFECEFF1),
+    color: const Color(0xFFF1F4F7),
     child: Center(
-      child: Icon(icon, size: iconSize, color: const Color(0xFF607D8B)),
+      child: Icon(icon, size: iconSize, color: const Color(0xFF718096)),
     ),
   );
 }

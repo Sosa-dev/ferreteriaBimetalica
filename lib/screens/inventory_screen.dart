@@ -433,12 +433,17 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
           const SizedBox(height: 12),
           DropdownButtonFormField<int>(
             initialValue: _categoryId,
+            isExpanded: true,
             decoration: const InputDecoration(labelText: 'Categoría'),
             items: widget.categories
                 .map(
                   (category) => DropdownMenuItem(
                     value: (category['id_categoria'] as num).toInt(),
-                    child: Text(category['nombre'].toString()),
+                    child: Text(
+                      category['nombre'].toString(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 )
                 .toList(),
@@ -447,6 +452,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
           const SizedBox(height: 12),
           DropdownButtonFormField<int>(
             initialValue: _locationId,
+            isExpanded: true,
             decoration: const InputDecoration(labelText: 'Ubicación'),
             items: widget.locations
                 .map(
@@ -454,6 +460,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                     value: (location['id_ubicacion'] as num).toInt(),
                     child: Text(
                       '${location['pasillo']} · ${location['estante']} · ${location['nivel']}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 )
