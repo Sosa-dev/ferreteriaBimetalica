@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 
 import '../core/api_client.dart';
 import 'home_screen.dart';
+import 'catalog_screen.dart';
+import 'order_screens.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -157,6 +159,26 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const CatalogScreen(
+                          employeeMode: false,
+                          guestMode: true,
+                        ),
+                      ),
+                    ),
+                    child: const Text('Explorar y comprar como invitado'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const GuestOrderLookupScreen(),
+                      ),
+                    ),
+                    child: const Text('Consultar comprobante de invitado'),
                   ),
                 ],
               ),

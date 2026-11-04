@@ -56,6 +56,9 @@ class ApiClient {
       if (error.response?.statusCode == 403) {
         return 'Tu usuario no tiene permisos para esta acción.';
       }
+      if ((error.response?.statusCode ?? 0) >= 500) {
+        return 'La API encontró un error interno. Revisa la terminal donde está ejecutándose.';
+      }
       if (error.type == DioExceptionType.connectionTimeout ||
           error.type == DioExceptionType.connectionError) {
         return 'No se pudo conectar con la API en $apiBaseUrl';

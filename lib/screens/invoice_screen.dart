@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -10,12 +11,16 @@ class InvoiceScreen extends StatefulWidget {
     required this.sale,
     required this.invoice,
     required this.invoiceError,
+    this.invoicePath,
+    this.invoiceHeaders,
     super.key,
   });
 
   final Map<String, dynamic> sale;
   final Map<String, dynamic>? invoice;
   final String? invoiceError;
+  final String? invoicePath;
+  final Map<String, String>? invoiceHeaders;
 
   @override
   State<InvoiceScreen> createState() => _InvoiceScreenState();
@@ -69,6 +74,10 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
               if (_invoice != null) ...[
                 pw.Text('Cliente: ${_invoice!['nombre_razon_social']}'),
                 pw.Text('Documento: ${_invoice!['numero_documento']}'),
+                pw.Text('Correo: ${_invoice!['correo']}'),
+                pw.Text('Teléfono: ${_invoice!['telefono']}'),
+                pw.Text('Dirección: ${_invoice!['direccion']}'),
+                pw.Text('Método de pago: ${_invoice!['metodo_pago']}'),
               ],
               pw.SizedBox(height: 16),
               pw.TableHelper.fromTextArray(
@@ -113,7 +122,8 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
     });
     try {
       final response = await ApiClient.instance.dio.get(
-        '/ventas/${widget.sale['id_venta']}/factura',
+        widget.invoicePath ?? '/ventas/${widget.sale['id_venta']}/factura',
+        options: Options(headers: widget.invoiceHeaders),
       );
       if (!mounted) return;
       setState(() {
@@ -168,6 +178,10 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                     Text('Cliente: ${_invoice!['nombre_razon_social']}'),
                     Text('Tipo: ${_invoice!['tipo_cliente']}'),
                     Text('Documento: ${_invoice!['numero_documento']}'),
+                    Text('Correo: ${_invoice!['correo']}'),
+                    Text('Teléfono: ${_invoice!['telefono']}'),
+                    Text('Dirección: ${_invoice!['direccion']}'),
+                    Text('Método de pago: ${_invoice!['metodo_pago']}'),
                   ],
                 ],
               ),

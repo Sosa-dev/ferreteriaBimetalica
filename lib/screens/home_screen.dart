@@ -6,6 +6,8 @@ import 'catalog_screen.dart';
 import 'inventory_screen.dart';
 import 'order_screens.dart';
 import 'pos_screen.dart';
+import 'reports_screen.dart';
+import 'sales_history_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({
@@ -78,7 +80,20 @@ class HomeScreen extends StatelessWidget {
           Icons.point_of_sale,
           () => _open(context, const PosScreen()),
         ),
+        _HomeAction(
+          'Historial de ventas',
+          'Consulta ventas y vuelve a imprimir facturas',
+          Icons.history,
+          () => _open(context, const SalesHistoryScreen()),
+        ),
       ],
+      if (roleId == 1)
+        _HomeAction(
+          'Reportes y administración',
+          'Consulta ventas, productos e inventario',
+          Icons.analytics_outlined,
+          () => _open(context, const ReportsScreen()),
+        ),
     ];
 
     return Scaffold(

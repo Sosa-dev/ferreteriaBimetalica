@@ -14,16 +14,22 @@ class PosScreen extends StatefulWidget {
 class _PosScreenState extends State<PosScreen> {
   final _search = TextEditingController();
   final _customerName = TextEditingController();
+  final _customerEmail = TextEditingController();
+  final _customerPhone = TextEditingController();
   final _document = TextEditingController();
+  final _address = TextEditingController();
   List<Product> _matches = [];
   final Map<int, _CartLine> _cart = {};
   String _customerType = 'Natural';
+  String _paymentMethod = 'Efectivo';
   bool _searching = false;
   bool _charging = false;
   String? _searchError;
 
-  double get _subtotal =>
-      _cart.values.fold(0, (sum, line) => sum + line.product.salePrice * line.qty);
+  double get _subtotal => _cart.values.fold(
+    0,
+    (sum, line) => sum + line.product.salePrice * line.qty,
+  );
   double get _tax => _subtotal * 0.13;
   double get _total => _subtotal + _tax;
 
@@ -31,7 +37,10 @@ class _PosScreenState extends State<PosScreen> {
   void dispose() {
     _search.dispose();
     _customerName.dispose();
+    _customerEmail.dispose();
+    _customerPhone.dispose();
     _document.dispose();
+    _address.dispose();
     super.dispose();
   }
 
@@ -52,7 +61,10 @@ class _PosScreenState extends State<PosScreen> {
       if (!mounted) return;
       setState(
         () => _matches = response.data!
-            .map((item) => Product.fromJson(Map<String, dynamic>.from(item as Map)))
+            .map(
+              (item) =>
+                  Product.fromJson(Map<String, dynamic>.from(item as Map)),
+            )
             .toList(),
       );
     } catch (error) {
@@ -72,7 +84,10 @@ class _PosScreenState extends State<PosScreen> {
       } else if (product.stock == null || existing.qty < product.stock!) {
         existing.qty++;
       } else {
-        _message('No hay más unidades disponibles de este producto', error: true);
+        _message(
+          'No hay más unidades disponibles de este producto',
+          error: true,
+        );
       }
     });
   }
@@ -98,7 +113,12 @@ class _PosScreenState extends State<PosScreen> {
       _message('Agrega al menos un producto al carrito', error: true);
       return;
     }
-    if (_customerName.text.trim().isEmpty || _document.text.trim().isEmpty) {
+    if (_customerName.text.trim().isEmpty ||
+        _customerEmail.text.trim().isEmpty ||
+        !_customerEmail.text.contains('@') ||
+        _customerPhone.text.trim().length < 7 ||
+        _document.text.trim().isEmpty ||
+        _address.text.trim().isEmpty) {
       _message('Completa los datos de facturación', error: true);
       return;
     }
@@ -108,15 +128,21 @@ class _PosScreenState extends State<PosScreen> {
         '/ventas',
         data: {
           'items': _cart.values
-              .map((line) => {
-                    'producto_id': line.product.id,
-                    'cantidad': line.qty,
-                  })
+              .map(
+                (line) => {
+                  'producto_id': line.product.id,
+                  'cantidad': line.qty,
+                },
+              )
               .toList(),
           'datos_facturacion': {
             'tipo_cliente': _customerType,
             'nombre_razon_social': _customerName.text.trim(),
             'numero_documento': _document.text.trim(),
+            'correo': _customerEmail.text.trim(),
+            'telefono': _customerPhone.text.trim(),
+            'direccion': _address.text.trim(),
+            'metodo_pago': _paymentMethod,
           },
         },
       );
@@ -145,12 +171,17 @@ class _PosScreenState extends State<PosScreen> {
       setState(() {
         _cart.clear();
         _customerName.clear();
+        _customerEmail.clear();
+        _customerPhone.clear();
         _document.clear();
+        _address.clear();
         _matches.clear();
         _search.clear();
       });
     } catch (error) {
-      if (mounted) _message(ApiClient.instance.errorMessage(error), error: true);
+      if (mounted) {
+        _message(ApiClient.instance.errorMessage(error), error: true);
+      }
     } finally {
       if (mounted) setState(() => _charging = false);
     }
@@ -167,134 +198,170 @@ class _PosScreenState extends State<PosScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Punto de venta')),
-        body: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              TextField(
-                controller: _search,
-                onChanged: _findProducts,
-                decoration: const InputDecoration(
-                  labelText: 'Buscar producto',
-                  prefixIcon: Icon(Icons.search),
+    appBar: AppBar(title: const Text('Punto de venta')),
+    body: SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          TextField(
+            controller: _search,
+            onChanged: _findProducts,
+            decoration: const InputDecoration(
+              labelText: 'Buscar producto',
+              prefixIcon: Icon(Icons.search),
+            ),
+          ),
+          if (_searching) const LinearProgressIndicator(),
+          if (_searchError != null)
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Text(_searchError!),
+            ),
+          ..._matches.map(
+            (product) => Card(
+              child: ListTile(
+                title: Text(product.name),
+                subtitle: Text(
+                  '${product.code} · Existencia ${product.stock ?? 0} · '
+                  '\$${product.salePrice.toStringAsFixed(2)}',
+                ),
+                trailing: IconButton(
+                  tooltip: 'Agregar',
+                  onPressed: () => _add(product),
+                  icon: const Icon(Icons.add_circle_outline),
                 ),
               ),
-              if (_searching) const LinearProgressIndicator(),
-              if (_searchError != null)
-                Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Text(_searchError!),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Carrito (${_cart.length})',
+            style: Theme.of(context).textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          if (_cart.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: Text('Aún no agregas productos'),
+            ),
+          ..._cart.entries.map(
+            (entry) => Card(
+              child: ListTile(
+                title: Text(entry.value.product.name),
+                subtitle: Text(
+                  '\$${entry.value.product.salePrice.toStringAsFixed(2)} c/u',
                 ),
-              ..._matches.map(
-                (product) => Card(
-                  child: ListTile(
-                    title: Text(product.name),
-                    subtitle: Text(
-                      '${product.code} · Existencia ${product.stock ?? 0} · '
-                      '\$${product.salePrice.toStringAsFixed(2)}',
-                    ),
-                    trailing: IconButton(
-                      tooltip: 'Agregar',
-                      onPressed: () => _add(product),
+                leading: IconButton(
+                  onPressed: () => _setQuantity(entry.key, entry.value.qty - 1),
+                  icon: const Icon(Icons.remove_circle_outline),
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('${entry.value.qty}'),
+                    IconButton(
+                      onPressed: () =>
+                          _setQuantity(entry.key, entry.value.qty + 1),
                       icon: const Icon(Icons.add_circle_outline),
                     ),
-                  ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 12),
-              Text(
-                'Carrito (${_cart.length})',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              if (_cart.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(12),
-                  child: Text('Aún no agregas productos'),
-                ),
-              ..._cart.entries.map(
-                (entry) => Card(
-                  child: ListTile(
-                    title: Text(entry.value.product.name),
-                    subtitle: Text(
-                      '\$${entry.value.product.salePrice.toStringAsFixed(2)} c/u',
-                    ),
-                    leading: IconButton(
-                      onPressed: () => _setQuantity(entry.key, entry.value.qty - 1),
-                      icon: const Icon(Icons.remove_circle_outline),
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('${entry.value.qty}'),
-                        IconButton(
-                          onPressed: () =>
-                              _setQuantity(entry.key, entry.value.qty + 1),
-                          icon: const Icon(Icons.add_circle_outline),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      _amountLine('Subtotal', _subtotal),
-                      _amountLine('IVA (13%)', _tax),
-                      const Divider(),
-                      _amountLine('Total', _total, bold: true),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              DropdownButtonFormField<String>(
-                initialValue: _customerType,
-                decoration: const InputDecoration(labelText: 'Tipo de cliente'),
-                items: const [
-                  DropdownMenuItem(value: 'Natural', child: Text('Persona natural')),
-                  DropdownMenuItem(value: 'Juridico', child: Text('Persona jurídica')),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  _amountLine('Subtotal', _subtotal),
+                  _amountLine('IVA (13%)', _tax),
+                  const Divider(),
+                  _amountLine('Total', _total, bold: true),
                 ],
-                onChanged: (value) =>
-                    setState(() => _customerType = value ?? 'Natural'),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _customerName,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre / razón social',
-                ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          DropdownButtonFormField<String>(
+            initialValue: _customerType,
+            decoration: const InputDecoration(labelText: 'Tipo de cliente'),
+            items: const [
+              DropdownMenuItem(
+                value: 'Natural',
+                child: Text('Persona natural'),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _document,
-                decoration: const InputDecoration(
-                  labelText: 'Número de documento',
-                ),
-              ),
-              const SizedBox(height: 18),
-              FilledButton.icon(
-                onPressed: _charging ? null : _charge,
-                icon: const Icon(Icons.point_of_sale),
-                label: _charging
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Cobrar y generar factura'),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
+              DropdownMenuItem(
+                value: 'Juridico',
+                child: Text('Persona jurídica'),
               ),
             ],
+            onChanged: (value) =>
+                setState(() => _customerType = value ?? 'Natural'),
           ),
-        ),
-      );
+          const SizedBox(height: 12),
+          TextField(
+            controller: _customerName,
+            decoration: const InputDecoration(
+              labelText: 'Nombre / razón social',
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _customerEmail,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(labelText: 'Correo electrónico'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _customerPhone,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(labelText: 'Teléfono'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _document,
+            decoration: const InputDecoration(labelText: 'Número de documento'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _address,
+            decoration: const InputDecoration(labelText: 'Dirección'),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            initialValue: _paymentMethod,
+            decoration: const InputDecoration(labelText: 'Método de pago'),
+            items: const [
+              DropdownMenuItem(value: 'Efectivo', child: Text('Efectivo')),
+              DropdownMenuItem(value: 'Tarjeta', child: Text('Tarjeta')),
+              DropdownMenuItem(
+                value: 'Transferencia',
+                child: Text('Transferencia'),
+              ),
+            ],
+            onChanged: (value) =>
+                setState(() => _paymentMethod = value ?? 'Efectivo'),
+          ),
+          const SizedBox(height: 18),
+          FilledButton.icon(
+            onPressed: _charging ? null : _charge,
+            icon: const Icon(Icons.point_of_sale),
+            label: _charging
+                ? const CircularProgressIndicator(color: Colors.white)
+                : const Text('Cobrar y generar factura'),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 
-  Widget _amountLine(String label, double amount, {bool bold = false}) => Padding(
+  Widget _amountLine(String label, double amount, {bool bold = false}) =>
+      Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,

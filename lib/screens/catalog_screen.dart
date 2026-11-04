@@ -8,9 +8,14 @@ import '../widgets/product_photo.dart';
 import 'order_screens.dart';
 
 class CatalogScreen extends StatefulWidget {
-  const CatalogScreen({required this.employeeMode, super.key});
+  const CatalogScreen({
+    required this.employeeMode,
+    this.guestMode = false,
+    super.key,
+  });
 
   final bool employeeMode;
+  final bool guestMode;
 
   @override
   State<CatalogScreen> createState() => _CatalogScreenState();
@@ -339,6 +344,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
       MaterialPageRoute<void>(
         builder: (_) => OrderCartScreen(
           items: _cart,
+          guestMode: widget.guestMode,
           onCartChanged: () {
             if (mounted) setState(() {});
           },
