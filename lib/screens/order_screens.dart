@@ -528,12 +528,12 @@ class OrderReceiptScreen extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  _receiptLine('Monto del pedido (API)', subtotal, bold: true),
+                  _receiptLine('Subtotal del pedido', subtotal, bold: true),
                   if (totalEstimado != null) ...[
                     const Divider(),
-                    _receiptLine('IVA estimado (API)', _amount(ivaEstimado)),
+                    _receiptLine('IVA estimado', _amount(ivaEstimado)),
                     _receiptLine(
-                      'Total estimado (API)',
+                      'Total estimado',
                       _amount(totalEstimado),
                       bold: true,
                     ),
@@ -669,7 +669,7 @@ class _GuestOrderLookupScreenState extends State<GuestOrderLookupScreen> {
           const Padding(
             padding: EdgeInsets.only(top: 6),
             child: Text(
-              'El código tiene 12 caracteres. La API permite 10 consultas por IP cada 15 minutos.',
+              'Ingresa el código de consulta que recibiste para revisar tu pedido.',
             ),
           ),
           const SizedBox(height: 12),
@@ -801,7 +801,7 @@ Future<void> _printOrderReceipt({
         pw.Align(
           alignment: pw.Alignment.centerRight,
           child: pw.Text(
-            'Monto del pedido (API): '
+            'Subtotal del pedido: '
             '\$${_amount(order['total_pedido']).toStringAsFixed(2)}',
             style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
           ),
@@ -810,14 +810,14 @@ Future<void> _printOrderReceipt({
           pw.Align(
             alignment: pw.Alignment.centerRight,
             child: pw.Text(
-              'IVA estimado (API): '
+              'IVA estimado: '
               '\$${_amount(ivaEstimado).toStringAsFixed(2)}',
             ),
           ),
           pw.Align(
             alignment: pw.Alignment.centerRight,
             child: pw.Text(
-              'Total estimado (API): '
+              'Total estimado: '
               '\$${_amount(totalEstimado).toStringAsFixed(2)}',
               style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
             ),

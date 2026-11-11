@@ -79,7 +79,7 @@ void main() {
     );
 
     expect(find.text('Imprimir comprobante'), findsOneWidget);
-    expect(find.text('Monto del pedido (API)'), findsOneWidget);
+    expect(find.text('Subtotal del pedido'), findsOneWidget);
     expect(find.text('\$25.50'), findsNWidgets(2));
     expect(tester.takeException(), isNull);
   });
