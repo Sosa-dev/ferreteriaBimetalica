@@ -32,6 +32,27 @@ void main() {
       expect(product.purchasePrice, 8);
     });
 
+    test('preserves product active state for soft-delete reactivation', () {
+      final product = Product.fromJson({
+        'id_producto': 3,
+        'codigo': 'HM-003',
+        'nombre': 'Llave inglesa',
+        'precio_venta': '12.00',
+        'estado': false,
+      });
+
+      expect(product.isActive, isFalse);
+      expect(
+        Product.fromJson({
+          'id_producto': 4,
+          'codigo': 'HM-004',
+          'nombre': 'Pinza',
+          'precio_venta': '8.00',
+        }).isActive,
+        isTrue,
+      );
+    });
+
     test('reports invalid decimal fields clearly', () {
       expect(
         () => Product.fromJson({

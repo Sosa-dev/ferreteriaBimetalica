@@ -5,7 +5,9 @@ import '../models/product.dart';
 import '../widgets/product_photo.dart';
 
 class InventoryScreen extends StatefulWidget {
-  const InventoryScreen({super.key});
+  const InventoryScreen({this.ownerMode = false, super.key});
+
+  final bool ownerMode;
 
   @override
   State<InventoryScreen> createState() => _InventoryScreenState();
@@ -26,6 +28,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   Future<void> _load() async {
+    if (!widget.ownerMode) {
+      setState(() {
+        _loading = false;
+        _error = 'Solo el propietario puede administrar el inventario.';
+      });
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
@@ -122,6 +131,45 @@ class _InventoryScreenState extends State<InventoryScreen> {
     }
   }
 
+  Future<void> _toggleProductStatus(Product product) async {
+    final activate = !product.isActive;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(activate ? 'Reactivar producto' : 'Inactivar producto'),
+        content: Text(
+          activate ? '¿Quieres volver a activar "${product.name}"?' : 'El producto dejará de estar disponible, pero se conservará su historial.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(activate ? 'Reactivar' : 'Inactivar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      if (activate) {
+        await _api.dio.put(
+          '/productos/${product.id}',
+          data: const {'estado': true},
+        );
+      } else {
+        await _api.dio.delete('/productos/${product.id}');
+      }
+      if (!mounted) return;
+      _message(activate ? 'Producto reactivado.' : 'Producto inactivado.');
+      await _load();
+    } catch (error) {
+      if (mounted) _message(_api.errorMessage(error), error: true);
+    }
+  }
+
   void _message(String text, {bool error = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -136,20 +184,31 @@ class _InventoryScreenState extends State<InventoryScreen> {
     length: 3,
     child: Scaffold(
       appBar: AppBar(
-        title: const Text('Inventario'),
-        bottom: const TabBar(
-          isScrollable: true,
-          tabs: [
-            Tab(text: 'Productos', icon: Icon(Icons.inventory_2_outlined)),
-            Tab(text: 'Categorías', icon: Icon(Icons.category_outlined)),
-            Tab(text: 'Ubicaciones', icon: Icon(Icons.place_outlined)),
-          ],
-        ),
+        title: Text(widget.ownerMode ? 'Inventario' : 'Búsqueda de productos'),
+        bottom: widget.ownerMode
+            ? const TabBar(
+                isScrollable: true,
+                tabs: [
+                  Tab(
+                    text: 'Productos',
+                    icon: Icon(Icons.inventory_2_outlined),
+                  ),
+                  Tab(text: 'Categorías', icon: Icon(Icons.category_outlined)),
+                  Tab(text: 'Ubicaciones', icon: Icon(Icons.place_outlined)),
+                ],
+              )
+            : null,
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
           ? _ErrorState(message: _error!, onRetry: _load)
+          : !widget.ownerMode
+          ? const Center(
+              child: Text(
+                'Solo el propietario puede administrar el inventario.',
+              ),
+            )
           : TabBarView(
               children: [
                 _productList(),
@@ -204,7 +263,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
               title: Text(product.name),
               subtitle: Text(
                 '${product.code} · \$${product.salePrice.toStringAsFixed(2)}'
-                '${product.stock == null ? '' : ' · Stock: ${product.stock}'}',
+                '${product.stock == null ? '' : ' · Stock: ${product.stock}'}'
+                '${product.isActive ? '' : ' · Inactivo'}',
               ),
               trailing: Wrap(
                 children: [
@@ -214,9 +274,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     onPressed: () => _editProduct(product),
                   ),
                   IconButton(
-                    tooltip: 'Eliminar producto',
-                    icon: const Icon(Icons.delete_outline),
-                    onPressed: () => _deleteEntry('/productos', product.id),
+                    tooltip: product.isActive
+                        ? 'Inactivar producto'
+                        : 'Reactivar producto',
+                    icon: Icon(
+                      product.isActive ? Icons.archive_outlined : Icons.restore,
+                    ),
+                    onPressed: () => _toggleProductStatus(product),
                   ),
                 ],
               ),
@@ -366,7 +430,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       'stock_minimo': int.parse(_fields['stock_minimo']!.text),
       'categoria_id': _categoryId,
       'ubicacion_id': _locationId,
-      'estado': true,
+      'estado': widget.product?.isActive ?? true,
     };
     try {
       final product = widget.product;

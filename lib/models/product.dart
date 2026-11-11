@@ -17,6 +17,7 @@ class Product {
     this.aisle,
     this.shelf,
     this.level,
+    this.isActive = true,
   });
 
   final int id;
@@ -36,6 +37,7 @@ class Product {
   final String? aisle;
   final String? shelf;
   final String? level;
+  final bool isActive;
 
   static double? _parseDouble(Object? value, String field) {
     if (value == null) return null;
@@ -70,6 +72,7 @@ class Product {
       aisle: json['pasillo']?.toString(),
       shelf: json['estante']?.toString(),
       level: json['nivel']?.toString(),
+      isActive: json['estado'] != false,
     );
   }
 }

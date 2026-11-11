@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/api_client.dart';
+import '../core/payment_payload.dart';
 import '../models/product.dart';
 import 'invoice_screen.dart';
 
@@ -18,6 +19,7 @@ class _PosScreenState extends State<PosScreen> {
   final _customerPhone = TextEditingController();
   final _document = TextEditingController();
   final _address = TextEditingController();
+  final _paymentReference = TextEditingController();
   List<Product> _matches = [];
   final Map<int, _CartLine> _cart = {};
   String _customerType = 'Natural';
@@ -41,6 +43,7 @@ class _PosScreenState extends State<PosScreen> {
     _customerPhone.dispose();
     _document.dispose();
     _address.dispose();
+    _paymentReference.dispose();
     super.dispose();
   }
 
@@ -122,6 +125,11 @@ class _PosScreenState extends State<PosScreen> {
       _message('Completa los datos de facturación', error: true);
       return;
     }
+    final reference = _paymentReference.text.trim();
+    if (_paymentMethod != 'Efectivo' && reference.length > 100) {
+      _message('La referencia no puede superar 100 caracteres', error: true);
+      return;
+    }
     setState(() => _charging = true);
     try {
       final saleResponse = await ApiClient.instance.dio.post(
@@ -142,7 +150,10 @@ class _PosScreenState extends State<PosScreen> {
             'correo': _customerEmail.text.trim(),
             'telefono': _customerPhone.text.trim(),
             'direccion': _address.text.trim(),
-            'metodo_pago': _paymentMethod,
+            ...buildPaymentPayload(
+              method: _paymentMethod,
+              reference: reference,
+            ),
           },
         },
       );
@@ -246,20 +257,41 @@ class _PosScreenState extends State<PosScreen> {
             ),
           ..._cart.entries.map(
             (entry) => Card(
-              child: ListTile(
-                title: Text(entry.value.product.name),
-                subtitle: Text(
-                  '\$${entry.value.product.salePrice.toStringAsFixed(2)} c/u',
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
                 ),
-                leading: IconButton(
-                  onPressed: () => _setQuantity(entry.key, entry.value.qty - 1),
-                  icon: const Icon(Icons.remove_circle_outline),
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
+                child: Row(
                   children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            entry.value.product.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          Text(
+                            '\$${entry.value.product.salePrice.toStringAsFixed(2)} c/u · '
+                            '\$${(entry.value.product.salePrice * entry.value.qty).toStringAsFixed(2)}',
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Reducir cantidad',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () =>
+                          _setQuantity(entry.key, entry.value.qty - 1),
+                      icon: const Icon(Icons.remove_circle_outline),
+                    ),
                     Text('${entry.value.qty}'),
                     IconButton(
+                      tooltip: 'Aumentar cantidad',
+                      visualDensity: VisualDensity.compact,
                       onPressed: () =>
                           _setQuantity(entry.key, entry.value.qty + 1),
                       icon: const Icon(Icons.add_circle_outline),
@@ -344,6 +376,17 @@ class _PosScreenState extends State<PosScreen> {
             onChanged: (value) =>
                 setState(() => _paymentMethod = value ?? 'Efectivo'),
           ),
+          if (_paymentMethod != 'Efectivo') ...[
+            const SizedBox(height: 12),
+            TextField(
+              controller: _paymentReference,
+              maxLength: 100,
+              decoration: const InputDecoration(
+                labelText: 'Referencia de pago (opcional)',
+                helperText: 'Para transferencia o tarjeta',
+              ),
+            ),
+          ],
           const SizedBox(height: 18),
           FilledButton.icon(
             onPressed: _charging ? null : _charge,

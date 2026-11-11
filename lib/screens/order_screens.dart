@@ -1,8 +1,13 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 import '../core/api_client.dart';
+import '../core/payment_payload.dart';
 import '../models/product.dart';
+import '../widgets/product_photo.dart';
 import 'invoice_screen.dart';
 
 class OrderCartLine {
@@ -119,6 +124,8 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
             details: receiptDetails,
             accessCode: data['codigo_acceso']?.toString(),
             guestMode: widget.guestMode,
+            ivaEstimado: data['iva_estimado'],
+            totalEstimado: data['total_estimado'],
           ),
         ),
       );
@@ -160,40 +167,115 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                     children: [
                       ...widget.items.values.map(
                         (line) => Card(
+                          clipBehavior: Clip.antiAlias,
                           child: Padding(
                             padding: const EdgeInsets.all(12),
-                            child: Row(
+                            child: Column(
                               children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        line.product.name,
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    SizedBox(
+                                      width: 64,
+                                      height: 64,
+                                      child: ProductPhoto(
+                                        url: line.product.photoUrl,
+                                        fit: BoxFit.contain,
+                                        iconSize: 30,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            line.product.name,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '\$${line.product.salePrice.toStringAsFixed(2)} c/u',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    IconButton(
+                                      tooltip: 'Quitar producto',
+                                      visualDensity: VisualDensity.compact,
+                                      onPressed: () {
+                                        setState(
+                                          () => widget.items.remove(
+                                            line.product.id,
+                                          ),
+                                        );
+                                        widget.onCartChanged();
+                                      },
+                                      icon: const Icon(
+                                        Icons.delete_outline,
+                                        color: Colors.red,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 20),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        'Subtotal: \$${(line.product.salePrice * line.quantity).toStringAsFixed(2)}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
-                                      Text(
-                                        '\$${line.product.salePrice.toStringAsFixed(2)} c/u',
+                                    ),
+                                    const SizedBox(width: 8),
+                                    SizedBox(
+                                      width: 128,
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          IconButton(
+                                            tooltip: 'Quitar una unidad',
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                            onPressed: () =>
+                                                _changeQuantity(line, -1),
+                                            icon: const Icon(
+                                              Icons.remove_circle_outline,
+                                            ),
+                                          ),
+                                          Text(
+                                            '${line.quantity}',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          IconButton(
+                                            tooltip: 'Agregar una unidad',
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                            onPressed: () =>
+                                                _changeQuantity(line, 1),
+                                            icon: const Icon(
+                                              Icons.add_circle_outline,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      Text(
-                                        'Subtotal: \$${(line.product.salePrice * line.quantity).toStringAsFixed(2)}',
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                IconButton(
-                                  tooltip: 'Quitar una unidad',
-                                  onPressed: () => _changeQuantity(line, -1),
-                                  icon: const Icon(Icons.remove_circle_outline),
-                                ),
-                                Text('${line.quantity}'),
-                                IconButton(
-                                  tooltip: 'Agregar una unidad',
-                                  onPressed: () => _changeQuantity(line, 1),
-                                  icon: const Icon(Icons.add_circle_outline),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -207,12 +289,13 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Text(
-                                'Datos para el comprobante y factura',
+                                'Datos para tu pedido',
                                 style: Theme.of(context).textTheme.titleMedium
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 12),
                               DropdownButtonFormField<String>(
+                                isExpanded: true,
                                 initialValue: _customerType,
                                 decoration: const InputDecoration(
                                   labelText: 'Tipo de cliente',
@@ -307,7 +390,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'Subtotal: \$${_total.toStringAsFixed(2)} · IVA estimado: \$${(_total * .13).toStringAsFixed(2)} · Total al retirar: \$${(_total * 1.13).toStringAsFixed(2)}',
+                          'Subtotal estimado: \$${_total.toStringAsFixed(2)}',
                           textAlign: TextAlign.end,
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.bold),
@@ -324,9 +407,11 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                                 )
                               : const Icon(Icons.check),
                           label: Text(
-                            _submitting
-                                ? 'Enviando pedido...'
-                                : 'Crear comprobante de pedido',
+                            _submitting ? 'Enviando...' : 'Confirmar pedido',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ],
@@ -361,6 +446,8 @@ class OrderReceiptScreen extends StatelessWidget {
     required this.details,
     required this.guestMode,
     this.accessCode,
+    this.ivaEstimado,
+    this.totalEstimado,
     super.key,
   });
 
@@ -368,11 +455,12 @@ class OrderReceiptScreen extends StatelessWidget {
   final List<Map<String, dynamic>> details;
   final String? accessCode;
   final bool guestMode;
+  final Object? ivaEstimado;
+  final Object? totalEstimado;
 
   @override
   Widget build(BuildContext context) {
     final subtotal = _amount(order['total_pedido']);
-    final tax = subtotal * .13;
     return Scaffold(
       appBar: AppBar(title: const Text('Comprobante de pedido')),
       body: ListView(
@@ -440,13 +528,26 @@ class OrderReceiptScreen extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  _receiptLine('Subtotal', subtotal),
-                  _receiptLine('IVA estimado (13%)', tax),
-                  const Divider(),
-                  _receiptLine('Total al retirar', subtotal + tax, bold: true),
+                  _receiptLine('Monto del pedido (API)', subtotal, bold: true),
+                  if (totalEstimado != null) ...[
+                    const Divider(),
+                    _receiptLine('IVA estimado (API)', _amount(ivaEstimado)),
+                    _receiptLine(
+                      'Total estimado (API)',
+                      _amount(totalEstimado),
+                      bold: true,
+                    ),
+                  ],
                 ],
               ),
             ),
+          ),
+          const SizedBox(height: 8),
+          _printOrderReceiptButton(
+            context,
+            order: order,
+            details: details,
+            accessCode: accessCode,
           ),
           const SizedBox(height: 12),
           FilledButton(
@@ -480,7 +581,14 @@ class _GuestOrderLookupScreenState extends State<GuestOrderLookupScreen> {
   }
 
   Future<void> _lookup() async {
-    if (_code.text.trim().isEmpty) return;
+    final code = _code.text.trim();
+    if (!RegExp(r'^[A-Za-z0-9_-]{12}$').hasMatch(code)) {
+      setState(() {
+        _receipt = null;
+        _error = 'El código debe contener exactamente 12 caracteres.';
+      });
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
@@ -489,7 +597,7 @@ class _GuestOrderLookupScreenState extends State<GuestOrderLookupScreen> {
     try {
       final response = await ApiClient.instance.dio.get(
         '/pedidos/consulta',
-        options: Options(headers: {'X-Order-Access-Code': _code.text.trim()}),
+        options: Options(headers: {'X-Order-Access-Code': code}),
       );
       if (!mounted) return;
       setState(
@@ -507,7 +615,10 @@ class _GuestOrderLookupScreenState extends State<GuestOrderLookupScreen> {
   Future<void> _openGuestInvoice() async {
     try {
       final path = '/pedidos/consulta/factura';
-      final response = await ApiClient.instance.dio.get(path);
+      final response = await ApiClient.instance.dio.get(
+        path,
+        options: Options(headers: {'X-Order-Access-Code': _code.text.trim()}),
+      );
       if (!mounted) return;
       final invoice = Map<String, dynamic>.from(response.data as Map);
       final sale = {
@@ -550,8 +661,15 @@ class _GuestOrderLookupScreenState extends State<GuestOrderLookupScreen> {
         children: [
           TextField(
             controller: _code,
+            maxLength: 12,
             decoration: const InputDecoration(
               labelText: 'Código privado del comprobante',
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.only(top: 6),
+            child: Text(
+              'El código tiene 12 caracteres. La API permite 10 consultas por IP cada 15 minutos.',
             ),
           ),
           const SizedBox(height: 12),
@@ -588,6 +706,15 @@ class _GuestOrderLookupScreenState extends State<GuestOrderLookupScreen> {
             const Text(
               'Presenta el comprobante en la ferretería para pagar y retirar tu pedido.',
             ),
+            const SizedBox(height: 8),
+            _printOrderReceiptButton(
+              context,
+              order: Map<String, dynamic>.from(order),
+              details: details,
+              accessCode: _code.text.trim(),
+              ivaEstimado: _receipt?['iva_estimado'],
+              totalEstimado: _receipt?['total_estimado'],
+            ),
             if (order['venta_id'] != null) ...[
               const SizedBox(height: 12),
               FilledButton.icon(
@@ -601,6 +728,117 @@ class _GuestOrderLookupScreenState extends State<GuestOrderLookupScreen> {
       ),
     );
   }
+}
+
+Widget _printOrderReceiptButton(
+  BuildContext context, {
+  required Map<String, dynamic> order,
+  required List<Map<String, dynamic>> details,
+  String? accessCode,
+  Object? ivaEstimado,
+  Object? totalEstimado,
+}) => OutlinedButton.icon(
+  onPressed: () async {
+    try {
+      await _printOrderReceipt(
+        order: order,
+        details: details,
+        accessCode: accessCode,
+        ivaEstimado: ivaEstimado,
+        totalEstimado: totalEstimado,
+      );
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo imprimir el comprobante: $error')),
+        );
+      }
+    }
+  },
+  icon: const Icon(Icons.print_outlined),
+  label: const Text('Imprimir comprobante'),
+);
+
+Future<void> _printOrderReceipt({
+  required Map<String, dynamic> order,
+  required List<Map<String, dynamic>> details,
+  String? accessCode,
+  Object? ivaEstimado,
+  Object? totalEstimado,
+}) async {
+  final document = pw.Document();
+  document.addPage(
+    pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.all(32),
+      build: (context) => [
+        pw.Text(
+          'Comprobante de pedido',
+          style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
+        ),
+        pw.SizedBox(height: 8),
+        pw.Text('Pedido #${order['id_pedido'] ?? ''}'),
+        pw.Text('Fecha: ${order['fecha_hora'] ?? 'No disponible'}'),
+        pw.SizedBox(height: 12),
+        pw.Text('Cliente: ${order['nombre_cliente'] ?? 'No indicado'}'),
+        pw.Text('Correo: ${order['correo_cliente'] ?? 'No indicado'}'),
+        pw.Text('Teléfono: ${order['telefono_cliente'] ?? 'No indicado'}'),
+        pw.Text('Estado: ${order['estado'] ?? 'No disponible'}'),
+        pw.SizedBox(height: 16),
+        pw.TableHelper.fromTextArray(
+          headers: const ['Código', 'Producto', 'Cant.', 'Precio', 'Subtotal'],
+          data: details.map((detail) {
+            return [
+              detail['producto_codigo']?.toString() ?? '—',
+              detail['producto_nombre']?.toString() ?? 'Producto',
+              detail['cantidad']?.toString() ?? '0',
+              '\$${_amount(detail['precio_unitario']).toStringAsFixed(2)}',
+              '\$${_amount(detail['subtotal']).toStringAsFixed(2)}',
+            ];
+          }).toList(),
+        ),
+        pw.SizedBox(height: 16),
+        pw.Align(
+          alignment: pw.Alignment.centerRight,
+          child: pw.Text(
+            'Monto del pedido (API): '
+            '\$${_amount(order['total_pedido']).toStringAsFixed(2)}',
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+          ),
+        ),
+        if (totalEstimado != null) ...[
+          pw.Align(
+            alignment: pw.Alignment.centerRight,
+            child: pw.Text(
+              'IVA estimado (API): '
+              '\$${_amount(ivaEstimado).toStringAsFixed(2)}',
+            ),
+          ),
+          pw.Align(
+            alignment: pw.Alignment.centerRight,
+            child: pw.Text(
+              'Total estimado (API): '
+              '\$${_amount(totalEstimado).toStringAsFixed(2)}',
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            ),
+          ),
+        ],
+        if (accessCode != null && accessCode.isNotEmpty) ...[
+          pw.SizedBox(height: 20),
+          pw.Text(
+            'Código privado de consulta: $accessCode',
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+          ),
+          pw.Text('Guárdalo y no lo compartas.'),
+        ],
+        pw.SizedBox(height: 20),
+        pw.Text(
+          'Este documento es un comprobante de pedido, no una factura ni un recibo de pago.',
+        ),
+      ],
+    ),
+  );
+  await Printing.layoutPdf(onLayout: (_) async => document.save());
 }
 
 Widget _receiptLine(String label, double amount, {bool bold = false}) =>
@@ -829,12 +1067,16 @@ class StaffOrdersScreen extends StatefulWidget {
 
 class _StaffOrdersScreenState extends State<StaffOrdersScreen> {
   List<Map<String, dynamic>> _orders = [];
+  final _clientFilter = TextEditingController();
   final Map<int, List<Map<String, dynamic>>> _details = {};
   final Set<int> _loadingDetails = {};
   final Map<int, String> _detailErrors = {};
   bool _loading = true;
   final Set<int> _updating = {};
   String? _error;
+  String _statusFilter = '';
+  DateTime? _startDate;
+  DateTime? _endDate;
 
   @override
   void initState() {
@@ -848,8 +1090,18 @@ class _StaffOrdersScreenState extends State<StaffOrdersScreen> {
       _error = null;
     });
     try {
+      final query = <String, dynamic>{};
+      if (_statusFilter.isNotEmpty) query['estado'] = _statusFilter;
+      if (_startDate != null) {
+        query['fecha_inicio'] = _dateParam(_startDate!);
+      }
+      if (_endDate != null) query['fecha_fin'] = _dateParam(_endDate!);
+      if (_clientFilter.text.trim().isNotEmpty) {
+        query['cliente'] = _clientFilter.text.trim();
+      }
       final response = await ApiClient.instance.dio.get<List<dynamic>>(
         '/pedidos',
+        queryParameters: query,
       );
       if (!mounted) return;
       setState(() {
@@ -865,6 +1117,46 @@ class _StaffOrdersScreenState extends State<StaffOrdersScreen> {
         _loading = false;
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _clientFilter.dispose();
+    super.dispose();
+  }
+
+  String _dateParam(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+
+  Future<void> _selectOrderDate({required bool start}) async {
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: (start ? _startDate : _endDate) ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateUtils.dateOnly(DateTime.now()),
+    );
+    if (selected == null || !mounted) return;
+    final candidateStart = start ? selected : _startDate;
+    final candidateEnd = start ? _endDate : selected;
+    if (candidateStart != null &&
+        candidateEnd != null &&
+        candidateStart.isAfter(candidateEnd)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('La fecha inicial no puede ser posterior a la final.'),
+        ),
+      );
+      return;
+    }
+    setState(() {
+      if (start) {
+        _startDate = DateUtils.dateOnly(selected);
+      } else {
+        _endDate = DateUtils.dateOnly(selected);
+      }
+    });
   }
 
   Future<void> _loadOrderDetails(int orderId) async {
@@ -900,11 +1192,11 @@ class _StaffOrdersScreenState extends State<StaffOrdersScreen> {
     setState(() {});
     try {
       if (nextStatus == 'Entregado') {
-        final method = await _choosePaymentMethod();
-        if (method == null) return;
+        final payment = await _choosePaymentMethod();
+        if (payment == null) return;
         final response = await ApiClient.instance.dio.post(
           '/pedidos/$orderId/entregar',
-          data: {'metodo_pago': method},
+          data: payment,
         );
         final sale = Map<String, dynamic>.from(response.data as Map);
         Map<String, dynamic>? invoice;
@@ -946,19 +1238,73 @@ class _StaffOrdersScreenState extends State<StaffOrdersScreen> {
     }
   }
 
-  Future<String?> _choosePaymentMethod() => showDialog<String>(
-    context: context,
-    builder: (context) => SimpleDialog(
-      title: const Text('Registrar pago del pedido'),
-      children: [
-        for (final method in const ['Efectivo', 'Tarjeta', 'Transferencia'])
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(context, method),
-            child: Text(method),
+  Future<Map<String, dynamic>?> _choosePaymentMethod() async {
+    var method = 'Efectivo';
+    final reference = TextEditingController();
+    try {
+      return await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (context) => StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: const Text('Registrar pago del pedido'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: method,
+                  decoration: const InputDecoration(
+                    labelText: 'Método de pago',
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'Efectivo',
+                      child: Text('Efectivo'),
+                    ),
+                    DropdownMenuItem(value: 'Tarjeta', child: Text('Tarjeta')),
+                    DropdownMenuItem(
+                      value: 'Transferencia',
+                      child: Text('Transferencia'),
+                    ),
+                  ],
+                  onChanged: (value) =>
+                      setDialogState(() => method = value ?? 'Efectivo'),
+                ),
+                if (method != 'Efectivo') ...[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: reference,
+                    maxLength: 100,
+                    decoration: const InputDecoration(
+                      labelText: 'Referencia de pago (opcional)',
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  final value = reference.text.trim();
+                  if (value.length > 100) return;
+                  Navigator.pop(
+                    context,
+                    buildPaymentPayload(method: method, reference: value),
+                  );
+                },
+                child: const Text('Continuar'),
+              ),
+            ],
           ),
-      ],
-    ),
-  );
+        ),
+      );
+    } finally {
+      reference.dispose();
+    }
+  }
 
   Widget _orderDetailPanel(Map<String, dynamic> order, int orderId) {
     if (_loadingDetails.contains(orderId)) {
@@ -1125,65 +1471,150 @@ class _StaffOrdersScreenState extends State<StaffOrdersScreen> {
         ? _ErrorPanel(message: _error!, onRetry: _loadOrders)
         : RefreshIndicator(
             onRefresh: _loadOrders,
-            child: _orders.isEmpty
-                ? ListView(
-                    children: const [
-                      SizedBox(height: 160),
-                      Center(child: Text('No hay pedidos registrados')),
-                    ],
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: _orders.length,
-                    itemBuilder: (context, index) {
-                      final order = _orders[index];
-                      final orderId = (order['id_pedido'] as num).toInt();
-                      final status = order['estado']?.toString() ?? '';
-                      final isWholesale = order['prioridad_mayorista'] == true;
-                      return Card(
-                        child: ExpansionTile(
-                          onExpansionChanged: (expanded) {
-                            if (expanded) _loadOrderDetails(orderId);
-                          },
-                          leading: const CircleAvatar(
-                            child: Icon(Icons.shopping_bag_outlined),
-                          ),
-                          title: Text(
-                            'Pedido #$orderId · ${_statusLabel(status)}',
-                          ),
-                          subtitle: Text(
-                            '${order['nombre_cliente'] ?? 'Cliente'} · '
-                            '${_dateLabel(order['fecha_hora'])}\n'
-                            'Total antes de IVA: '
-                            '\$${_amount(order['total_pedido']).toStringAsFixed(2)}',
-                          ),
-                          children: [
-                            if (isWholesale)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                ),
-                                child: Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Chip(
-                                    avatar: const Icon(
-                                      Icons.workspace_premium_outlined,
-                                      size: 18,
-                                    ),
-                                    label: Text(
-                                      'Mayorista · compras 12 meses: '
-                                      '\$${_amount(order['compras_12_meses']).toStringAsFixed(2)}',
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            _orderDetailPanel(order, orderId),
-                          ],
-                        ),
-                      );
+            child: ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: _orders.length + 1,
+              itemBuilder: (context, index) {
+                if (index == 0) return _orderFilters();
+                if (_orders.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(
+                      child: Text('No hay pedidos para estos filtros.'),
+                    ),
+                  );
+                }
+                final order = _orders[index - 1];
+                final orderId = (order['id_pedido'] as num).toInt();
+                final status = order['estado']?.toString() ?? '';
+                final isWholesale = order['prioridad_mayorista'] == true;
+                return Card(
+                  child: ExpansionTile(
+                    onExpansionChanged: (expanded) {
+                      if (expanded) _loadOrderDetails(orderId);
                     },
+                    leading: const CircleAvatar(
+                      child: Icon(Icons.shopping_bag_outlined),
+                    ),
+                    title: Text('Pedido #$orderId · ${_statusLabel(status)}'),
+                    subtitle: Text(
+                      '${order['nombre_cliente'] ?? 'Cliente'} · '
+                      '${_dateLabel(order['fecha_hora'])}\n'
+                      'Total antes de IVA: '
+                      '\$${_amount(order['total_pedido']).toStringAsFixed(2)}',
+                    ),
+                    children: [
+                      if (isWholesale)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Chip(
+                              avatar: const Icon(
+                                Icons.workspace_premium_outlined,
+                                size: 18,
+                              ),
+                              label: Text(
+                                'Mayorista · compras 12 meses: '
+                                '\$${_amount(order['compras_12_meses']).toStringAsFixed(2)}',
+                              ),
+                            ),
+                          ),
+                        ),
+                      _orderDetailPanel(order, orderId),
+                    ],
                   ),
+                );
+              },
+            ),
           ),
+  );
+
+  Widget _orderFilters() => Card(
+    margin: const EdgeInsets.only(bottom: 12),
+    child: Padding(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Cola compartida de pedidos',
+            style: Theme.of(context).textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(
+            initialValue: _statusFilter,
+            decoration: const InputDecoration(labelText: 'Estado'),
+            items: const [
+              DropdownMenuItem(value: '', child: Text('Todos los estados')),
+              DropdownMenuItem(value: 'Pendiente', child: Text('Pendiente')),
+              DropdownMenuItem(
+                value: 'En preparacion',
+                child: Text('En preparación'),
+              ),
+              DropdownMenuItem(value: 'Listo', child: Text('Listo')),
+              DropdownMenuItem(value: 'Entregado', child: Text('Entregado')),
+            ],
+            onChanged: (value) => setState(() => _statusFilter = value ?? ''),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _clientFilter,
+            textInputAction: TextInputAction.search,
+            onSubmitted: (_) => _loadOrders(),
+            decoration: const InputDecoration(
+              labelText: 'Cliente, correo o documento',
+              prefixIcon: Icon(Icons.person_search_outlined),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton(
+                onPressed: () => _selectOrderDate(start: true),
+                child: Text(
+                  _startDate == null
+                      ? 'Fecha inicial'
+                      : 'Desde ${_dateParam(_startDate!)}',
+                ),
+              ),
+              OutlinedButton(
+                onPressed: () => _selectOrderDate(start: false),
+                child: Text(
+                  _endDate == null
+                      ? 'Fecha final'
+                      : 'Hasta ${_dateParam(_endDate!)}',
+                ),
+              ),
+              FilledButton.icon(
+                onPressed: _loadOrders,
+                icon: const Icon(Icons.filter_alt_outlined),
+                label: const Text('Filtrar'),
+              ),
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _statusFilter = '';
+                    _startDate = null;
+                    _endDate = null;
+                    _clientFilter.clear();
+                  });
+                  _loadOrders();
+                },
+                child: const Text('Limpiar'),
+              ),
+            ],
+          ),
+          if (_orders.isEmpty) ...[
+            const SizedBox(height: 10),
+            const Text('No hay pedidos para estos filtros.'),
+          ],
+        ],
+      ),
+    ),
   );
 }
 

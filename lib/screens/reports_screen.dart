@@ -151,7 +151,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
           pw.SizedBox(height: 10),
           pw.Text(
             'Inventario: ${report.inventoryProducts} productos, '
-            '${report.inventoryUnits} unidades',
+            '${report.inventoryUnits} unidades, '
+            '${report.inventoryLowStock} bajo mínimo, '
+            '${report.inventoryOutOfStock} sin existencia',
           ),
           pw.Text(
             'Valor a costo: ${_money(report.inventoryCost)}    '
@@ -190,6 +192,82 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     product.name,
                     product.quantity.toString(),
                     _money(product.revenue),
+                  ],
+                )
+                .toList(),
+          ),
+          pw.SizedBox(height: 18),
+          pw.Text(
+            'Productos por reponer',
+            style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 8),
+          pw.TableHelper.fromTextArray(
+            headers: const [
+              'Código',
+              'Producto',
+              'Categoría',
+              'Stock',
+              'Mínimo',
+            ],
+            data: report.restockItems
+                .map(
+                  (item) => [
+                    item.code,
+                    item.name,
+                    item.category,
+                    item.stock.toString(),
+                    item.minimumStock.toString(),
+                  ],
+                )
+                .toList(),
+          ),
+          pw.SizedBox(height: 18),
+          pw.Text(
+            'Productos de mayor valor de venta en inventario',
+            style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 8),
+          pw.TableHelper.fromTextArray(
+            headers: const [
+              'Código',
+              'Producto',
+              'Categoría',
+              'Stock',
+              'Valor',
+            ],
+            data: report.highValueItems
+                .map(
+                  (item) => [
+                    item.code,
+                    item.name,
+                    item.category,
+                    item.stock.toString(),
+                    _money(item.saleValue),
+                  ],
+                )
+                .toList(),
+          ),
+          pw.SizedBox(height: 18),
+          pw.Text(
+            'Inventario por categoría',
+            style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 8),
+          pw.TableHelper.fromTextArray(
+            headers: const [
+              'Categoría',
+              'Productos',
+              'Unidades',
+              'Valor venta',
+            ],
+            data: report.inventoryByCategory
+                .map(
+                  (category) => [
+                    category.name,
+                    category.products.toString(),
+                    category.units.toString(),
+                    _money(category.saleValue),
                   ],
                 )
                 .toList(),
@@ -367,6 +445,31 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         value: _money(report.inventoryCost),
                         icon: Icons.inventory_2_outlined,
                       ),
+                      _MetricCard(
+                        title: 'Productos activos',
+                        value: report.inventoryProducts.toString(),
+                        icon: Icons.widgets_outlined,
+                      ),
+                      _MetricCard(
+                        title: 'Unidades disponibles',
+                        value: report.inventoryUnits.toString(),
+                        icon: Icons.inventory_outlined,
+                      ),
+                      _MetricCard(
+                        title: 'Bajo mínimo',
+                        value: report.inventoryLowStock.toString(),
+                        icon: Icons.warning_amber_outlined,
+                      ),
+                      _MetricCard(
+                        title: 'Sin existencia',
+                        value: report.inventoryOutOfStock.toString(),
+                        icon: Icons.remove_shopping_cart_outlined,
+                      ),
+                      _MetricCard(
+                        title: 'Valor inventario a venta',
+                        value: _money(report.inventorySaleValue),
+                        icon: Icons.sell_outlined,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 22),
@@ -431,6 +534,45 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 '${category.units} unidades',
                               ),
                               trailing: Text(_money(category.saleValue)),
+                            ),
+                          ),
+                        const Divider(height: 24),
+                        Text(
+                          'Productos que requieren reposición (${report.restockItems.length})',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        if (report.restockItems.isEmpty)
+                          const Text(
+                            'No hay productos pendientes de reposición.',
+                          )
+                        else
+                          ...report.restockItems.map(
+                            (item) => ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(item.name),
+                              subtitle: Text(
+                                '${item.code} · ${item.category} · '
+                                'Stock ${item.stock} / mínimo ${item.minimumStock}',
+                              ),
+                              trailing: Text(_money(item.saleValue)),
+                            ),
+                          ),
+                        const Divider(height: 24),
+                        Text(
+                          'Productos de mayor valor en inventario (${report.highValueItems.length})',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        if (report.highValueItems.isEmpty)
+                          const Text('No hay productos activos.')
+                        else
+                          ...report.highValueItems.map(
+                            (item) => ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(item.name),
+                              subtitle: Text(
+                                '${item.code} · ${item.category} · Stock ${item.stock}',
+                              ),
+                              trailing: Text(_money(item.saleValue)),
                             ),
                           ),
                       ],
@@ -585,6 +727,10 @@ class _ReportData {
     required this.inventoryUnits,
     required this.inventoryCost,
     required this.inventorySaleValue,
+    required this.inventoryLowStock,
+    required this.inventoryOutOfStock,
+    required this.restockItems,
+    required this.highValueItems,
     required this.inventoryByCategory,
     required this.wholesaleThreshold,
   });
@@ -598,6 +744,10 @@ class _ReportData {
   final int inventoryUnits;
   final double inventoryCost;
   final double inventorySaleValue;
+  final int inventoryLowStock;
+  final int inventoryOutOfStock;
+  final List<_InventoryItem> restockItems;
+  final List<_InventoryItem> highValueItems;
   final List<_InventoryCategory> inventoryByCategory;
   final double? wholesaleThreshold;
 
@@ -623,6 +773,14 @@ class _ReportData {
       inventoryUnits: _asInt(inventory['unidades_disponibles']),
       inventoryCost: _asDouble(inventory['valor_inventario_compra']),
       inventorySaleValue: _asDouble(inventory['valor_inventario_venta']),
+      inventoryLowStock: _asInt(inventory['productos_bajo_stock']),
+      inventoryOutOfStock: _asInt(inventory['productos_sin_stock']),
+      restockItems: (inventory['productos_reponer'] as List? ?? [])
+          .map((item) => _InventoryItem.fromMap(item as Map))
+          .toList(),
+      highValueItems: (inventory['productos_mayor_valor'] as List? ?? [])
+          .map((item) => _InventoryItem.fromMap(item as Map))
+          .toList(),
       inventoryByCategory: (inventory['por_categoria'] as List? ?? [])
           .map((item) => _InventoryCategory.fromMap(item as Map))
           .toList(),
@@ -688,5 +846,35 @@ class _InventoryCategory {
     _ReportData._asInt(row['productos']),
     _ReportData._asInt(row['unidades']),
     _ReportData._asDouble(row['valor_venta']),
+  );
+}
+
+class _InventoryItem {
+  const _InventoryItem({
+    required this.code,
+    required this.name,
+    required this.category,
+    required this.stock,
+    required this.minimumStock,
+    required this.purchaseValue,
+    required this.saleValue,
+  });
+
+  final String code;
+  final String name;
+  final String category;
+  final int stock;
+  final int minimumStock;
+  final double purchaseValue;
+  final double saleValue;
+
+  factory _InventoryItem.fromMap(Map row) => _InventoryItem(
+    code: row['codigo']?.toString() ?? '',
+    name: row['nombre']?.toString() ?? '',
+    category: row['categoria']?.toString() ?? '',
+    stock: _ReportData._asInt(row['stock_actual']),
+    minimumStock: _ReportData._asInt(row['stock_minimo']),
+    purchaseValue: _ReportData._asDouble(row['valor_compra']),
+    saleValue: _ReportData._asDouble(row['valor_venta']),
   );
 }

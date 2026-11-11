@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../core/api_client.dart';
 import 'auth_screens.dart';
+import 'account_management_screen.dart';
 import 'catalog_screen.dart';
 import 'inventory_screen.dart';
 import 'order_screens.dart';
+import 'payments_screen.dart';
 import 'pos_screen.dart';
 import 'reports_screen.dart';
 import 'sales_history_screen.dart';
@@ -62,12 +64,13 @@ class HomeScreen extends StatelessWidget {
           Icons.assignment_outlined,
           () => _open(context, const StaffOrdersScreen()),
         ),
-        _HomeAction(
-          'Inventario',
-          'Productos, categorías y ubicaciones',
-          Icons.inventory_2_outlined,
-          () => _open(context, const InventoryScreen()),
-        ),
+        if (roleId == 1)
+          _HomeAction(
+            'Inventario',
+            'Productos, categorías y ubicaciones',
+            Icons.inventory_2_outlined,
+            () => _open(context, const InventoryScreen(ownerMode: true)),
+          ),
         _HomeAction(
           'Búsqueda de productos',
           'Consulta existencias y pasillos',
@@ -87,6 +90,22 @@ class HomeScreen extends StatelessWidget {
           () => _open(context, const SalesHistoryScreen()),
         ),
       ],
+      if (isStaff)
+        _HomeAction(
+          'Cuentas de usuario',
+          roleId == 1
+              ? 'Crear empleados y administrar el acceso'
+              : 'Consulta las cuentas sin modificar el acceso',
+          Icons.manage_accounts_outlined,
+          () => _open(context, AccountManagementScreen(ownerMode: roleId == 1)),
+        ),
+      if (roleId == 1)
+        _HomeAction(
+          'Registros de pago',
+          'Consulta pagos y referencias de transacción',
+          Icons.payments_outlined,
+          () => _open(context, const PaymentsScreen()),
+        ),
       if (roleId == 1)
         _HomeAction(
           'Reportes y administración',

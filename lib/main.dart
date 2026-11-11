@@ -1,8 +1,19 @@
 import 'package:flutter/material.dart';
 
+import 'core/api_client.dart';
 import 'screens/auth_screens.dart';
 
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
+
 void main() {
+  ApiClient.instance.onUnauthorized = () {
+    final navigator = appNavigatorKey.currentState;
+    if (navigator == null) return;
+    navigator.pushAndRemoveUntil(
+      MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+      (_) => false,
+    );
+  };
   runApp(const FerreteriaApp());
 }
 
@@ -12,6 +23,7 @@ class FerreteriaApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: appNavigatorKey,
       title: 'Ferretería Bimetálica',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(

@@ -6,6 +6,14 @@ import 'home_screen.dart';
 import 'catalog_screen.dart';
 import 'order_screens.dart';
 
+String? _emailValidator(String? value) {
+  final email = value?.trim() ?? '';
+  if (email.isEmpty) return 'Ingresa tu correo';
+  return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)
+      ? null
+      : 'Ingresa un correo válido';
+}
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -105,9 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       labelText: 'Correo electrónico',
                       prefixIcon: Icon(Icons.email_outlined),
                     ),
-                    validator: (value) => value == null || value.trim().isEmpty
-                        ? 'Ingresa tu correo'
-                        : null,
+                    validator: _emailValidator,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -269,6 +275,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     _email,
                     'Correo electrónico',
                     keyboardType: TextInputType.emailAddress,
+                    validator: _emailValidator,
                   ),
                   const SizedBox(height: 14),
                   _field(_password, 'Contraseña', obscure: true),
@@ -296,6 +303,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     String label, {
     bool obscure = false,
     TextInputType? keyboardType,
+    String? Function(String?)? validator,
   }) => TextFormField(
     controller: controller,
     obscureText: obscure,
@@ -304,7 +312,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       labelText: label,
       prefixIcon: Icon(obscure ? Icons.lock_outline : Icons.person_outline),
     ),
-    validator: (value) =>
-        value == null || value.trim().isEmpty ? 'Campo obligatorio' : null,
+    validator:
+        validator ??
+        (value) =>
+            value == null || value.trim().isEmpty ? 'Campo obligatorio' : null,
   );
 }
